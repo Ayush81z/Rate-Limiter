@@ -10,7 +10,7 @@ public class TestController {
 
     @GetMapping("/hello")
     public String hello() {
-        return "Hello! Request is allowed ✅";
+        return "Hello! Request is allowed !";
     }
 
     @GetMapping("/test")
