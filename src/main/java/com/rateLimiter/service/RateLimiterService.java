@@ -4,56 +4,55 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.*;
+
 @Service
 public class RateLimiterService {
 
     private final StringRedisTemplate redisTemplate;
 
+    private final Map<String, List<Long>> requestLogs = new HashMap<>();
+
     @Value("${app.rate-limit.capacity:5}")
-    private int capacity;           // Max tokens (bucket size)
+    private int capacity;
 
     @Value("${app.rate-limit.refill-rate:5}")
-    private int refillRate;         // Tokens added per minute
+    private int refillRate;
 
     public RateLimiterService(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
-
-//      Checks whether the request is allowed or not
-//      @param key  (IP address or user ID)
-//      @return true = allowed, false = blocked
-
-
     public boolean isAllowed(String key) {
-
-        String redisKey = "ratelimit:" + key;
         long now = System.currentTimeMillis();
 
-//         Get current tokens
+        requestLogs.putIfAbsent(key, new ArrayList<>());
+        List<Long> logs = requestLogs.get(key);
+
+        logs.add(now);
+        logs.removeIf(timestamp -> now - timestamp > 60000); // keep only last 60 seconds
+
+        String redisKey = "ratelimit:" + key;
+
         String tokensStr = redisTemplate.opsForValue().get(redisKey + ":tokens");
-//        last refill time from Redis
         String timestampStr = redisTemplate.opsForValue().get(redisKey + ":timestamp");
 
-        // Set default values if first time
-        double tokens = tokensStr != null ? Double.parseDouble(tokensStr) : capacity;
-        long lastRefillTime = timestampStr != null ? Long.parseLong(timestampStr) : now;
+        double tokens = (tokensStr != null) ? Double.parseDouble(tokensStr) : capacity;
+        long lastRefill = (timestampStr != null) ? Long.parseLong(timestampStr) : now;
 
-//        refill tokens based on time passed
-        long timePassedInSeconds = (now - lastRefillTime) / 1000;
-        tokens = Math.min(capacity, tokens + (timePassedInSeconds * refillRate));
+        long secondsPassed = (now - lastRefill) / 1000;
+        tokens = Math.min(capacity, tokens + (secondsPassed * refillRate));
 
-//        Check if we have at least 1 token
-        if (tokens >= 1) {
-            tokens = tokens - 1;   // Consume one token
+        if (tokens >= 1.0) {
+            tokens -= 1.0;
 
-//            Save updated values back to Redis
-            redisTemplate.opsForValue().set(redisKey + ":tokens", String.valueOf(tokens));
+            // Save back to Redis
+            redisTemplate.opsForValue().set(redisKey + ":tokens", String.valueOf(tokens)); //redis maintains eveyrthing  in string so convert into string form
             redisTemplate.opsForValue().set(redisKey + ":timestamp", String.valueOf(now));
 
-            return true;   // Request Allowed if the tokens are > 1
+            return true;
         }
 
-        return false;  // Rate limit exceeded then block the request
+        return false;
     }
 }
