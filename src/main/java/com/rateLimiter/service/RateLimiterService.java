@@ -28,7 +28,7 @@ public class RateLimiterService {
         // Clear all existing rate limit data in Redis so new limits take effect
         redisTemplate.delete(redisTemplate.keys("ratelimit:*"));
 
-        System.out.println("🚀 Rate limit updated successfully to: " + capacity + " requests/min");
+        System.out.println(" Rate limit updated successfully to: " + capacity + " requests/min");
     }
 
     public RateLimitResponse isAllowed(String key) {
