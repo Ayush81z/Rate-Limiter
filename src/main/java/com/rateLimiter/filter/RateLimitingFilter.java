@@ -1,6 +1,7 @@
 package com.rateLimiter.filter;
 
 import com.rateLimiter.service.RateLimiterService;
+import com.rateLimiter.model.RateLimitResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,6 +28,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         String clientIp = getClientIp(request);
         String endpoint = request.getRequestURI();
 
+        response.setHeader("X-Client-IP", clientIp);
+
         // Bypass admin endpoints
         if (endpoint.startsWith("/admin")) {
             filterChain.doFilter(request, response);
@@ -37,9 +40,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
         System.out.println("Rate Limit Check -> IP: " + clientIp + " | Endpoint: " + endpoint + " | Key: " + key);
 
-        boolean allowed = rateLimiterService.isAllowed(key);
+        RateLimitResponse result = rateLimiterService.isAllowed(key);
 
-        if (!allowed) {
+        response.setHeader("X-RateLimit-Limit",
+                String.valueOf(rateLimiterService.getCurrentCapacity()));
+
+        response.setHeader("X-RateLimit-Remaining",
+                String.valueOf((int) result.getRemainingTokens()));
+
+        if (!result.isAllowed()) {
             response.setStatus(429);
             response.setContentType("application/json");
             response.getWriter().write("{\"error\": \"Too Many Requests. Please try again later.\"}");

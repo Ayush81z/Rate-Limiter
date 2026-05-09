@@ -1,6 +1,7 @@
 package com.rateLimiter.service;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
+import com.rateLimiter.model.RateLimitResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -30,7 +31,7 @@ public class RateLimiterService {
         System.out.println("🚀 Rate limit updated successfully to: " + capacity + " requests/min");
     }
 
-    public boolean isAllowed(String key) {
+    public RateLimitResponse isAllowed(String key) {
 
         long now = System.currentTimeMillis();
 
@@ -69,10 +70,10 @@ public class RateLimiterService {
             redisTemplate.opsForValue().set(redisKey + ":tokens", String.valueOf(tokens));
             redisTemplate.opsForValue().set(redisKey + ":timestamp", String.valueOf(lastRefillTime));
 
-            return true;
+            return new RateLimitResponse(true, tokens);
         }
 
-        return false;
+        return new RateLimitResponse(false, tokens);
     }
 
     public int getCurrentCapacity() {
