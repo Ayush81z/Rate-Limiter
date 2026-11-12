@@ -1,6 +1,6 @@
-# Distributed Rate Limiter
+# Rate Limiter
 
-A distributed rate limiter built using Spring Boot and Redis.
+A rate limiter built using Spring Boot and Redis.
 
 The project limits how many requests a client can send to an API within a fixed time period. If the limit is exceeded, the server returns an HTTP 429 (Too Many Requests) response.
 
@@ -10,7 +10,7 @@ The application uses the Token Bucket algorithm and Redis for centralized token 
 
 # Features
 
-* Distributed rate limiting using Redis
+* Rate limiting using Redis
 * Token Bucket algorithm implementation
 * IP-based request limiting
 * Dynamic rate limit updates using admin APIs
